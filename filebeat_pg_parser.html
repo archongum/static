@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <div>
+      <label>SQL:</label><br />
+      <textarea id="sql" rows="20" cols="70" placeholder="e.g. select $1 as id, $2 as name">select $1 as id, $2 as name</textarea><br /><br />
+      <label>Parameters:</label><br />
+      <textarea id="param" rows="10" cols="70" placeholder="e.g. parameters: $1 = '440100', $2 = 'BB'">parameters: $1 = '440100', $2 = 'BB'</textarea><br />
+      <button name="button" onclick="parse()">Parse</button>
+    </div>
+
+    <div>
+      <label>Result:</label><br />
+      <textarea id="result" rows="35" cols="70"></textarea><br />
+    </div>
+
+    <script>
+      function parse() {
+        var sql = document.getElementById("sql").value.trim();
+        var param = document.getElementById("param").value.trim();
+        var replacements = {};
+        
+        for(element of param.split(",")) {
+          var k, v;
+          for([i, kv] of Object.entries(element.split("="))) {
+          	if (i == 0) {
+            	k = kv.substring(kv.indexOf("$")).trim();
+            } else if (i == 1) {
+            	v = kv.trim().substring(1, kv.length-2);
+                // 非数字加单引号
+                if (!isFinite(v)) {
+                	v = String.prototype.concat("'", v, "'");
+                }
+            }
+          }
+          replacements[k] = v;
+        }
+        
+		// Ref: https://stackoverflow.com/a/7975025/9756912
+        sql = sql.replace(/\$\d+/g, function(all) {
+           return replacements[all] || all;
+        });
+        
+        document.getElementById("result").innerHTML = sql;
+      }
+    </script>
+
+    <style>
+      body {
+        background: transparent; /* Make it white if you need */
+        color: #000000;
+        padding: 0 24px;
+        margin: 0;
+        font-size: 20px;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      textarea {
+      	font-size: 20px;
+      }
+      button {
+          background-color: #4CAF50; /* Green */
+          border: none;
+          color: white;
+          padding: 15px 32px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 20px;
+       }
+    </style>
+  </body>
+</html>
