@@ -1,8 +1,7 @@
-# static
-Static HTML
+# Static Website
 
-# Usage
+## 🧬App
 
-## https://htmlpreview.github.io/
+- 👉 [filebeat_pg_parser.html](https://htmlpreview.github.io/?https://github.com/archongum/static/blob/main/filebeat_pg_parser.html)
 
-e.g. https://htmlpreview.github.io/?https://github.com/archongum/static/blob/main/filebeat_pg_parser.html
+💪Preview powered by: https://htmlpreview.github.io/
