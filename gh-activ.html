@@ -140,30 +140,30 @@
 <body>
     <div class="container">
         <h1>GitHub Repository Commit Activity (last year)</h1>
-
+        
         <div class="controls">
             <div class="input-group">
                 <input type="text" id="repoUrl" class="url-input" placeholder="Enter GitHub repository URL" value="https://github.com/apache/spark">
                 <button onclick="fetchFromUrl()">Load from URL</button>
             </div>
             <div class="example">Example: https://github.com/apache/spark or https://github.com/facebook/react</div>
-
+            
             <div class="or-divider">— OR —</div>
-
+            
             <div class="input-group">
                 <input type="text" id="owner" placeholder="Owner (e.g., apache)" value="apache">
                 <input type="text" id="repo" placeholder="Repository (e.g., spark)" value="spark">
                 <button onclick="fetchFromInputs()">Load from Owner/Repo</button>
             </div>
         </div>
-
+        
         <div id="loading">
             <div class="loader"></div>
             <p>Loading commit data... This might take a moment if GitHub is calculating statistics.</p>
         </div>
-
+        
         <div id="error"></div>
-
+        
         <div id="stats" class="stats" style="display: none;">
             <div class="stat-box">
                 <div class="stat-label">Total Commits</div>
@@ -182,7 +182,7 @@
                 <div class="stat-value" id="minMonth">-</div>
             </div>
         </div>
-
+        
         <div id="chartContainer">
             <canvas id="commitChart"></canvas>
         </div>
@@ -191,17 +191,17 @@
     <script>
         Chart.register(ChartDataLabels);
         let chart = null;
-
+        
         function parseGitHubUrl(url) {
             // Remove trailing slashes and .git extension
             url = url.trim().replace(/\/+$/, '').replace(/\.git$/, '');
-
+            
             // Try different GitHub URL patterns
             const patterns = [
                 /github\.com\/([^\/]+)\/([^\/]+)/,
                 /github\.com:([^\/]+)\/([^\/]+)/,
             ];
-
+            
             for (const pattern of patterns) {
                 const match = url.match(pattern);
                 if (match) {
@@ -211,57 +211,57 @@
                     };
                 }
             }
-
+            
             return null;
         }
-
+        
         function fetchFromUrl() {
             const url = document.getElementById('repoUrl').value.trim();
-
+            
             if (!url) {
                 showError('Please enter a GitHub repository URL');
                 return;
             }
-
+            
             const parsed = parseGitHubUrl(url);
-
+            
             if (!parsed) {
                 showError('Invalid GitHub repository URL. Please use format: https://github.com/owner/repo');
                 return;
             }
-
+            
             // Update the owner/repo inputs for clarity
             document.getElementById('owner').value = parsed.owner;
             document.getElementById('repo').value = parsed.repo;
-
+            
             fetchAndDisplay(parsed.owner, parsed.repo);
         }
-
+        
         function fetchFromInputs() {
             const owner = document.getElementById('owner').value.trim();
             const repo = document.getElementById('repo').value.trim();
-
+            
             if (!owner || !repo) {
                 showError('Please enter both owner and repository name');
                 return;
             }
-
+            
             // Update the URL input for clarity
             document.getElementById('repoUrl').value = `https://github.com/${owner}/${repo}`;
-
+            
             fetchAndDisplay(owner, repo);
         }
-
+        
         async function fetchAndDisplay(owner, repo) {
             showLoading(true);
             hideError();
             hideStats();
-
+            
             try {
                 // Fetch data from GitHub API
                 const url = `https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`;
                 let response = await fetch(url);
-
+                
                 // Handle 202 status (GitHub is calculating)
                 let retries = 0;
                 while (response.status === 202 && retries < 5) {
@@ -269,7 +269,7 @@
                     response = await fetch(url);
                     retries++;
                 }
-
+                
                 if (!response.ok) {
                     if (response.status === 404) {
                         throw new Error(`Repository not found: ${owner}/${repo}`);
@@ -279,26 +279,26 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                 }
-
+                
                 const data = await response.json();
-
+                
                 // Process data to aggregate by month
                 const monthlyCommits = {};
-
+                
                 data.forEach(week => {
                     const weekDate = new Date(week.week * 1000);
                     const monthKey = `${weekDate.getFullYear()}-${String(weekDate.getMonth() + 1).padStart(2, '0')}`;
-
+                    
                     if (!monthlyCommits[monthKey]) {
                         monthlyCommits[monthKey] = 0;
                     }
                     monthlyCommits[monthKey] += week.total;
                 });
-
+                
                 // Sort months and prepare data for chart
                 const sortedMonths = Object.keys(monthlyCommits).sort();
                 const commitCounts = sortedMonths.map(month => monthlyCommits[month]);
-
+                
                 // Calculate statistics
                 const totalCommits = commitCounts.reduce((a, b) => a + b, 0);
                 const average = totalCommits / commitCounts.length;
@@ -306,38 +306,38 @@
                 const minCommits = Math.min(...commitCounts);
                 const maxMonthIndex = commitCounts.indexOf(maxCommits);
                 const minMonthIndex = commitCounts.indexOf(minCommits);
-
+                
                 // Update statistics display
-                updateStats(totalCommits, average, sortedMonths[maxMonthIndex], maxCommits,
+                updateStats(totalCommits, average, sortedMonths[maxMonthIndex], maxCommits, 
                            sortedMonths[minMonthIndex], minCommits);
-
+                
                 // Create or update chart
                 createChart(sortedMonths, commitCounts, average, `${owner}/${repo}`);
-
+                
                 showLoading(false);
                 showStats();
-
+                
             } catch (error) {
                 showError(error.message);
                 showLoading(false);
             }
         }
-
+        
         function createChart(labels, data, average, repoName) {
             const ctx = document.getElementById('commitChart').getContext('2d');
-
+            
             // Destroy existing chart if any
             if (chart) {
                 chart.destroy();
             }
-
+            
             // Create average line data
             const averageLine = new Array(labels.length).fill(average);
-
+            
             // Determine bar colors based on average
-            const barColors = data.map(value => value > average ?
+            const barColors = data.map(value => value > average ? 
                 'rgba(40, 167, 69, 0.8)' : 'rgba(220, 53, 69, 0.8)');
-
+            
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -447,50 +447,60 @@
                 }
             });
         }
-
+        
         function updateStats(total, avg, maxMonth, maxCount, minMonth, minCount) {
             document.getElementById('totalCommits').textContent = total.toLocaleString();
             document.getElementById('avgCommits').textContent = avg.toFixed(0);
             document.getElementById('maxMonth').textContent = `${maxMonth} (${maxCount})`;
             document.getElementById('minMonth').textContent = `${minMonth} (${minCount})`;
         }
-
+        
         function showLoading(show) {
             document.getElementById('loading').style.display = show ? 'block' : 'none';
         }
-
+        
         function showError(message) {
             const errorDiv = document.getElementById('error');
             errorDiv.textContent = `Error: ${message}`;
             errorDiv.style.display = 'block';
         }
-
+        
         function hideError() {
             document.getElementById('error').style.display = 'none';
         }
-
+        
         function showStats() {
             document.getElementById('stats').style.display = 'grid';
         }
-
+        
         function hideStats() {
             document.getElementById('stats').style.display = 'none';
         }
-
-        // Load default repository on page load
+        
+        // Load data on page startup
         window.onload = function() {
+            // Check for a 'url' parameter in the browser's query string
+            const params = new URLSearchParams(window.location.search);
+            const repoUrlFromQuery = params.get('url');
+            
+            if (repoUrlFromQuery) {
+                // If a URL is provided in the query, update the input field
+                document.getElementById('repoUrl').value = repoUrlFromQuery;
+            }
+            
+            // Fetch data using the value in the URL input field (either from query or default)
             fetchFromUrl();
         };
-
+        
         // Allow Enter key to submit
         document.getElementById('repoUrl').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') fetchFromUrl();
         });
-
+        
         document.getElementById('owner').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') fetchFromInputs();
         });
-
+        
         document.getElementById('repo').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') fetchFromInputs();
         });
